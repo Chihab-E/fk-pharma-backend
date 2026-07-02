@@ -43,7 +43,7 @@ export async function buildAndExportComparisonExcel(
   }
 
   // All analyzed/needs_review responses (non-negative)
-  const responses = await db
+  const rawResponses = await db
     .select({
       response: supplierResponses,
       supplier: suppliers,
@@ -62,6 +62,16 @@ export async function buildAndExportComparisonExcel(
         eq(supplierResponses.isNegativeResponse, false),
       ),
     );
+
+  // Deduplicate: a LEFT JOIN on proformas can produce multiple rows per
+  // response when re-analysis creates additional proformas. Keep only the
+  // first (most recent) proforma per response.
+  const seenResponseIds = new Set<string>();
+  const responses = rawResponses.filter((r) => {
+    if (seenResponseIds.has(r.response.id)) return false;
+    seenResponseIds.add(r.response.id);
+    return true;
+  });
 
   if (responses.length === 0) {
     throw new Error("No analyzed supplier responses found for this offer");
@@ -147,10 +157,9 @@ export async function buildAndExportComparisonExcel(
       );
       const totalTTC = totalHT * (1 + tvaRate / 100);
 
-      // Delivery delay — prefer proforma > response > offer
-      const deliveryDelayText = proforma?.paymentTerms
-        ? null
-        : (response.deliveryDelay ?? offer.deliveryDelay ?? null);
+      // Delivery delay — prefer response > offer
+      const deliveryDelayText =
+        response.deliveryDelay ?? offer.deliveryDelay ?? null;
 
       const deliveryDelayDays = extractDaysFromText(
         response.deliveryDelay ?? offer.deliveryDelay,

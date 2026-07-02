@@ -502,7 +502,7 @@ async function buildComparisonSheet(
 
     // Écheance date format
     if (row.echeance) {
-      excelRow.getCell(17).numFmt = "DD/MM/YYYY";
+      excelRow.getCell(18).numFmt = "DD/MM/YYYY";
     }
   });
 
@@ -736,9 +736,11 @@ function buildRowValues(row: ComparisonExcelRow): Record<string, unknown> {
     // conformityPercentage handled separately with conditional formatting
     // technicalSheetStatus handled separately
     deliveryDelayText:
-      (row.deliveryDelayText ?? row.deliveryDelayDays)
-        ? `${row.deliveryDelayDays} j`
-        : "N/A",
+      row.deliveryDelayText
+        ? row.deliveryDelayText
+        : row.deliveryDelayDays
+          ? `${row.deliveryDelayDays} j`
+          : "N/A",
     warrantyText:
       row.warrantyText ??
       (row.warrantyMonths ? `${row.warrantyMonths} mois` : "N/A"),
